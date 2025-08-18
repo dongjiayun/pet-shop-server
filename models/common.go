@@ -29,6 +29,7 @@ type Model struct {
 	AuditBy   string    `json:"-" gorm:"type:varchar(255)"`
 	AuditAt   time.Time `json:"-" gorm:"default:null"`
 	UpdateBy  string    `json:"-" gorm:"type:varchar(255)"`
+	CreateBy  string    `json:"-" gorm:"type:varchar(255)"`
 }
 
 type Result struct {
@@ -168,7 +169,7 @@ func GetObsToken(bucket string, ch chan string) {
 	ch <- upToken
 }
 
-func CommonCreate[T interface{}](t *T) {
+func CommonCreate[T interface{}](t *T, c *gin.Context) {
 	value := reflect.ValueOf(t).Elem()
 	typ := reflect.TypeOf(t).Elem()
 	// 确保t包含Model类型的字段
@@ -191,6 +192,12 @@ func CommonCreate[T interface{}](t *T) {
 	auditAtField := value.FieldByName("AuditAt")
 	if auditAtField.IsValid() && auditAtField.CanSet() {
 		auditAtField.Set(reflect.ValueOf(time.Now()))
+	}
+
+	cid, _ := c.Get("cid")
+	createByField := value.FieldByName("CreateBy")
+	if createByField.IsValid() && createByField.CanSet() {
+		createByField.SetString(cid.(string))
 	}
 }
 

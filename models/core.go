@@ -1,8 +1,8 @@
 package models
 
 import (
-	"github.com/go-redis/redis/v8"
 	"github.com/dongjiayun/pet-shop-server/config"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -17,9 +17,14 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-		// Temporarily comment out undefined models
+	// Temporarily comment out undefined models
 	migErr := DB.AutoMigrate(
 		&User{},
+		&Pet{},
+		&Customer{},
+		&PetSnapShoot{},
+		&PetWashRecord{},
+		&PetWashRecordSnapShoot{},
 		// &Article{},
 		// &Tag{},
 		// &Comment{},

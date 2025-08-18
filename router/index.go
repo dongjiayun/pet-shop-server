@@ -109,9 +109,32 @@ func getPetApi(router *gin.Engine) {
 
 	r.POST("", controllers.CreatePet)
 
-	r.PUT(":PetId", controllers.UpdatePet)
+	r.PUT("", controllers.UpdatePet)
 
 	r.DELETE(":PetId", controllers.DeletePet)
+
+	r.Use(checkAdminMiddleware)
+
+	r.POST("history", controllers.GetPetSnapShoots)
+}
+
+func getWashRecordApi(router *gin.Engine) {
+	r := router.Group("/washRecord")
+
+	r.Use(checkTokenMiddleware)
+	r.Use(checkIsEmployeeMiddleware)
+
+	r.GET(":PetId", controllers.GetPetWashRecord)
+
+	r.POST("", controllers.CreatePetWashRecord)
+
+	r.PUT("", controllers.UpdatePetWashRecord)
+
+	r.DELETE(":PetId", controllers.DeletePetWashRecord)
+
+	r.Use(checkAdminMiddleware)
+
+	r.POST("history", controllers.GetPetWashRecordSnapShoots)
 }
 
 func getDictApi(router *gin.Engine) {
@@ -134,5 +157,6 @@ func GetRouter() *gin.Engine {
 	getUserApi(router)
 	getDictApi(router)
 	getPetApi(router)
+	getWashRecordApi(router)
 	return router
 }

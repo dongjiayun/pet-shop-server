@@ -676,30 +676,21 @@ func GetCidByToken(c *gin.Context) (string, error) {
 }
 
 func CheckIsAdmin(c *gin.Context) bool {
-	cid, err := GetCidByToken(c)
-	if err != nil {
-		return false
-	}
+	cid, _ := c.Get("cid")
 	var user models.User
 	models.DB.Where("cid = ?", cid).First(&user)
-	return user.Role == 2
+	return user.Role == 2 || user.Role == 3
 }
 
 func CheckIsSuperAdmin(c *gin.Context) bool {
-	cid, err := GetCidByToken(c)
-	if err != nil {
-		return false
-	}
+	cid, _ := c.Get("cid")
 	var user models.User
 	models.DB.Where("cid = ?", cid).First(&user)
 	return user.Role == 3
 }
 
 func CheckIsEmployee(c *gin.Context) bool {
-	cid, err := GetCidByToken(c)
-	if err != nil {
-		return false
-	}
+	cid, _ := c.Get("cid")
 	var user models.User
 	models.DB.Where("cid = ?", cid).First(&user)
 	return !(user.Role == 0 || user.Role == 4)
