@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"strconv"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dongjiayun/pet-shop-server/config"
 	"github.com/dongjiayun/pet-shop-server/models"
@@ -12,12 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-gomail/gomail"
 	"github.com/google/uuid"
-	"io"
-	"math/rand"
-	"net/http"
-	"net/url"
-	"strconv"
-	"time"
 )
 
 type MyClaims struct {
@@ -40,7 +41,48 @@ func SignIn(c *gin.Context) {
 	if user.LoginType == "" {
 		c.JSON(200, models.Result{Code: 10001, Message: "请选择登录方式"})
 	}
+	signup := func() {
+		// 邮箱不存在时，先发送验证码进行注册
+		if user.Otp == "" {
+			c.JSON(200, models.Result{Code: 10001, Message: "验证码不能为空"})
+			return
+		}
+
+		if user.Ticket == "" {
+			c.JSON(200, models.Result{Code: 10001, Message: "ticket不能为空"})
+			return
+		}
+
+		// 验证验证码是否正确
+		optCache := models.RedisClient.Get(context.Background(), "signup"+user.Email)
+		if optCache.Val() != "" {
+			var cache models.AuthOtp
+			json.Unmarshal([]byte(optCache.Val()), &cache)
+			if cache.Code == user.Otp && cache.Ticket == user.Ticket {
+				// 验证码正确，创建用户
+				ch := make(chan string)
+				go CreateByEmail(ch, c, user.Email)
+				result := <-ch
+				if result == "success" {
+					generateToken(c, user.Email, "email")
+					models.RedisClient.Del(context.Background(), "signup"+user.Email)
+					return
+				} else {
+					c.JSON(200, models.Result{Code: 10001, Message: result})
+					return
+				}
+			} else {
+				c.JSON(200, models.Result{Code: 10001, Message: "验证码错误"})
+				return
+			}
+		} else {
+			c.JSON(200, models.Result{Code: 10001, Message: "请先发送验证码"})
+			return
+		}
+	}
 	switch user.LoginType {
+	case "signup":
+		signup()
 	case "phone":
 		if user.Phone == "" {
 			c.JSON(200, models.Result{Code: 10001, Message: "手机号不能为空"})
@@ -79,6 +121,7 @@ func SignIn(c *gin.Context) {
 				json.Unmarshal([]byte(optCache.Val()), &cache)
 				if cache.Code == user.Otp && cache.Ticket == user.Ticket {
 					generateToken(c, user.Email, "email")
+					models.RedisClient.Del(context.Background(), user.Email)
 					return
 				} else {
 					c.JSON(200, models.Result{Code: 10001, Message: "验证码错误"})
@@ -88,13 +131,7 @@ func SignIn(c *gin.Context) {
 				c.JSON(200, models.Result{Code: 10001, Message: "请发送验证码"})
 			}
 		} else {
-			ch := make(chan string)
-			go CreateByEmail(ch, c, user.Email)
-			result := <-ch
-			if result == "success" {
-				generateToken(c, user.Email, "email")
-				return
-			}
+			signup()
 		}
 	case "emailWithPassword":
 		if user.Email == "" {
@@ -268,8 +305,8 @@ func SendEmailOtp(c *gin.Context) {
 	randomNumberStr := strconv.Itoa(randomNumber)
 
 	to := otpCode.Email
-	subject := "邮箱验证码"
-	message := "验证码：" + randomNumberStr
+	subject := "BIRKIN PET 邮箱登陆验证码"
+	message := "尊敬的用户：\n\n您好！您正在进行的操作需要验证身份。\n验证码：" + randomNumberStr + "\n（一分钟之内有效）\n\n请勿向他人泄露此验证码。"
 
 	smtpHost := config.SmtpHost
 	smtpPort := config.SmtpPort
@@ -303,6 +340,172 @@ func SendEmailOtp(c *gin.Context) {
 	redisClient := models.RedisClient
 
 	msg := redisClient.Set(context.Background(), otpCode.Email, authOtpJSON, 1*time.Minute)
+
+	if msg != nil {
+		fmt.Println(msg)
+	}
+
+	c.JSON(200, models.Result{Code: 0, Message: "success", Data: ticketString})
+}
+
+func SendSignupEmailOtp(c *gin.Context) {
+	type OtpCode struct {
+		Email string `json:"email" binding:"email" msg:"请输入正确的邮箱地址" gorm:"index"`
+	}
+	var otpCode OtpCode
+	err := c.ShouldBindJSON(&otpCode)
+	if otpCode.Email != "" && err != nil {
+		// 显示自定义的错误信息
+		msg := utils.GetValidMsg(err, &otpCode)
+		c.JSON(200, models.Result{Code: 10001, Message: msg})
+		return
+	}
+	if otpCode.Email == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "邮箱不能为空"})
+		return
+	}
+	emailExist := checkEmailExists(otpCode.Email, "")
+	if emailExist {
+		c.JSON(200, models.Result{Code: 10001, Message: "该邮箱已被注册"})
+		return
+	}
+
+	optCache := models.RedisClient.Get(context.Background(), "signup"+otpCode.Email)
+
+	if optCache.Val() != "" {
+		var cache models.AuthOtp
+		json.Unmarshal([]byte(optCache.Val()), &cache)
+		c.JSON(200, models.Result{
+			Code:    10001,
+			Message: "验证码已发送,请勿重复发送",
+			Data:    cache.Ticket,
+		})
+		return
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	randomNumber := rand.Intn(900000) + 100000
+	randomNumberStr := strconv.Itoa(randomNumber)
+
+	to := otpCode.Email
+	subject := "BIRKIN PET 邮箱注册验证码"
+	message := "尊敬的用户：\n\n您好！您正在进行的操作需要验证身份。\n验证码：" + randomNumberStr + "\n（一分钟之内有效）\n\n请勿向他人泄露此验证码。"
+
+	smtpHost := config.SmtpHost
+	smtpPort := config.SmtpPort
+	smtpUser := config.SmtpUser
+	smtpPassword := config.SmtpPassword
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", smtpUser)   // 发件人邮箱
+	m.SetHeader("To", to)           // 收件人邮箱
+	m.SetHeader("Subject", subject) // 邮件主题
+	m.SetBody("text/html", message) // 邮件内容
+
+	d := gomail.NewDialer(smtpHost, smtpPort, smtpUser, smtpPassword)
+
+	if err := d.DialAndSend(m); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ticket := uuid.New()
+	ticketString := ticket.String()
+
+	authOtp := models.AuthOtp{
+		Code:    randomNumberStr,
+		Account: otpCode.Email,
+		Ticket:  ticketString,
+	}
+
+	authOtpJSON, _ := json.Marshal(authOtp)
+
+	redisClient := models.RedisClient
+
+	msg := redisClient.Set(context.Background(), "signup"+otpCode.Email, authOtpJSON, 1*time.Minute)
+
+	if msg != nil {
+		fmt.Println(msg)
+	}
+
+	c.JSON(200, models.Result{Code: 0, Message: "success", Data: ticketString})
+}
+
+func SendResetEmailOtp(c *gin.Context) {
+	type OtpCode struct {
+		Email string `json:"email" binding:"email" msg:"请输入正确的邮箱地址" gorm:"index"`
+	}
+	var otpCode OtpCode
+	err := c.ShouldBindJSON(&otpCode)
+	if otpCode.Email != "" && err != nil {
+		// 显示自定义的错误信息
+		msg := utils.GetValidMsg(err, &otpCode)
+		c.JSON(200, models.Result{Code: 10001, Message: msg})
+		return
+	}
+	if otpCode.Email == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "邮箱不能为空"})
+		return
+	}
+	emailExist := checkEmailExists(otpCode.Email, "")
+	if !emailExist {
+		c.JSON(200, models.Result{Code: 10001, Message: "该邮箱不存在"})
+		return
+	}
+
+	optCache := models.RedisClient.Get(context.Background(), "signup"+otpCode.Email)
+
+	if optCache.Val() != "" {
+		var cache models.AuthOtp
+		json.Unmarshal([]byte(optCache.Val()), &cache)
+		c.JSON(200, models.Result{
+			Code:    10001,
+			Message: "验证码已发送,请勿重复发送",
+			Data:    cache.Ticket,
+		})
+		return
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	randomNumber := rand.Intn(900000) + 100000
+	randomNumberStr := strconv.Itoa(randomNumber)
+
+	to := otpCode.Email
+	subject := "BIRKIN PET 重置邮箱账号密码"
+	message := "尊敬的用户：\n\n您好！您正在进行的操作需要验证身份。\n验证码：" + randomNumberStr + "\n（一分钟之内有效）\n\n请勿向他人泄露此验证码。"
+
+	smtpHost := config.SmtpHost
+	smtpPort := config.SmtpPort
+	smtpUser := config.SmtpUser
+	smtpPassword := config.SmtpPassword
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", smtpUser)   // 发件人邮箱
+	m.SetHeader("To", to)           // 收件人邮箱
+	m.SetHeader("Subject", subject) // 邮件主题
+	m.SetBody("text/html", message) // 邮件内容
+
+	d := gomail.NewDialer(smtpHost, smtpPort, smtpUser, smtpPassword)
+
+	if err := d.DialAndSend(m); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ticket := uuid.New()
+	ticketString := ticket.String()
+
+	authOtp := models.AuthOtp{
+		Code:    randomNumberStr,
+		Account: otpCode.Email,
+		Ticket:  ticketString,
+	}
+
+	authOtpJSON, _ := json.Marshal(authOtp)
+
+	redisClient := models.RedisClient
+
+	msg := redisClient.Set(context.Background(), "resetPassword"+otpCode.Email, authOtpJSON, 1*time.Minute)
 
 	if msg != nil {
 		fmt.Println(msg)
@@ -546,7 +749,7 @@ func ResetPassword(c *gin.Context) {
 	newPassword := request.NewPassword
 
 	if !utils.CheckPassword(newPassword) {
-		c.JSON(200, models.Result{Code: 10002, Message: "密码格式不正确"})
+		c.JSON(200, models.Result{Code: 10002, Message: "请输入6-20位密码,必须包含数字和字母"})
 		return
 	}
 
@@ -694,4 +897,99 @@ func CheckIsEmployee(c *gin.Context) bool {
 	var user models.User
 	models.DB.Where("cid = ?", cid).First(&user)
 	return !(user.Role == 0 || user.Role == 4)
+}
+
+type ResetPasswordByOtpRequest struct {
+	Email    string `json:"email"`
+	Otp      string `json:"otp"`
+	Ticket   string `json:"ticket"`
+	Password string `json:"password"`
+}
+
+func ResetPasswordByOtp(c *gin.Context) {
+	var request ResetPasswordByOtpRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		c.JSON(200, models.Result{Code: 10001, Message: err.Error()})
+		return
+	}
+
+	if request.Email == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "邮箱不能为空"})
+		return
+	}
+
+	if request.Otp == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "验证码不能为空"})
+		return
+	}
+
+	if request.Ticket == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "ticket不能为空"})
+		return
+	}
+
+	if request.Password == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "新密码不能为空"})
+		return
+	}
+
+	// 验证密码格式
+	if !utils.CheckPassword(request.Password) {
+		c.JSON(200, models.Result{Code: 10002, Message: "请输入6-20位密码,必须包含数字和字母"})
+		return
+	}
+
+	// 检查邮箱是否存在
+	emailExist := checkEmailExists(request.Email, "")
+	if !emailExist {
+		c.JSON(200, models.Result{Code: 10001, Message: "邮箱不存在"})
+		return
+	}
+
+	// 验证验证码
+	optCache := models.RedisClient.Get(context.Background(), "resetPassword"+request.Email)
+	if optCache.Val() == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "请先发送验证码"})
+		return
+	}
+
+	var cache models.AuthOtp
+	err = json.Unmarshal([]byte(optCache.Val()), &cache)
+	if err != nil {
+		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+		return
+	}
+
+	if cache.Code != request.Otp || cache.Ticket != request.Ticket {
+		c.JSON(200, models.Result{Code: 10001, Message: "验证码错误"})
+		return
+	}
+
+	// 更新密码
+	var user models.User
+	db := models.DB.Model(&models.User{}).Where("email = ?", request.Email).First(&user)
+	if db.Error != nil {
+		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+		return
+	}
+
+	// 更新密码
+	user.Password = request.Password
+	db = models.DB.Save(&user)
+	if db.Error != nil {
+		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+		return
+	}
+
+	// 删除已使用的验证码
+	models.RedisClient.Del(context.Background(), "resetPassword"+request.Email)
+
+	// 使当前token失效（如果用户已登录）
+	token := c.GetHeader("Authorization")
+	if token != "" {
+		handleWasteToken(token)
+	}
+
+	c.JSON(200, models.Result{Code: 0, Message: "密码重置成功"})
 }

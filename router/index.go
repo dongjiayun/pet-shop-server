@@ -1,10 +1,11 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/dongjiayun/pet-shop-server/controllers"
 	"github.com/dongjiayun/pet-shop-server/models"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 func CORSMiddleware() gin.HandlerFunc {
@@ -25,7 +26,7 @@ func CORSMiddleware() gin.HandlerFunc {
 func checkTokenMiddleware(c *gin.Context) {
 	checkToken, _ := controllers.CheckToken(c)
 	if checkToken == nil {
-		c.JSON(403, models.Result{Code: 10001, Message: "token is invalid"})
+		c.JSON(401, models.Result{Code: 10001, Message: "token is invalid"})
 		c.Abort()
 		return
 	}
@@ -66,9 +67,17 @@ func getAuthApi(router *gin.Engine) {
 
 	r.POST("/sendEmailOtp", controllers.SendEmailOtp)
 
+	r.POST("/sendSignupEmailOtp", controllers.SendSignupEmailOtp)
+
+	r.POST("/sendResetEmailOtp", controllers.SendResetEmailOtp)
+
 	r.POST("/findbackPassword", controllers.FindbackPassword)
 
-	r.Use(checkTokenMiddleware).POST("/signOut", controllers.SignOut)
+	r.POST("/resetPasswordByOtp", controllers.ResetPasswordByOtp)
+
+	r.Use(checkTokenMiddleware)
+
+	r.POST("/signOut", controllers.SignOut)
 
 	r.POST("/refreshToken", controllers.RefreshToken)
 

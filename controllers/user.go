@@ -2,12 +2,13 @@ package controllers
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/dongjiayun/pet-shop-server/models"
 	"github.com/dongjiayun/pet-shop-server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"time"
 )
 
 func GetUsers(c *gin.Context) {
@@ -41,7 +42,6 @@ func GetUser(c *gin.Context) {
 	var userDetail models.User
 	db := models.DB.Table("user").
 		Select("*").
-		Joins("LEFT JOIN user_extend_infos uei ON uei.cid = user.cid").
 		Where("user.cid = ?", cid).
 		Where("deleted_at IS NULL").
 		First(&userDetail)
@@ -118,6 +118,8 @@ func CreateByEmail(ch chan string, c *gin.Context, email string) {
 	user.Username = "猫猫-" + user.Cid[len(user.Cid)-6:]
 
 	user.Password = "123456"
+
+	models.CommonCreate[models.User](&user, c)
 
 	db := models.DB.Create(&user)
 	if db.Error != nil {
