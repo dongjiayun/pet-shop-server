@@ -161,8 +161,8 @@ func UpdateUser(c *gin.Context) {
 	var user models.UpdateUserFields
 	err := c.ShouldBindJSON(&user)
 	cid := user.Cid
-	var oldUser models.User
-	getUser := models.DB.Where("cid = ?", cid).Where("deleted_at IS NULL").First(&oldUser)
+	var userInfo models.User
+	getUser := models.DB.Where("cid = ?", cid).Where("deleted_at IS NULL").First(&userInfo)
 	if getUser.Error != nil {
 		if getUser.Error.Error() == "record not found" {
 			c.JSON(200, models.Result{Code: 10001, Message: "未找到该条记录"})
@@ -179,7 +179,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	if user.Email != nil {
-		emailExist := checkEmailExists(*user.Email, oldUser.Email)
+		emailExist := checkEmailExists(*user.Email, userInfo.Email)
 		if emailExist {
 			c.JSON(200, models.Result{Code: 10002, Message: "邮箱已存在"})
 			return
@@ -190,7 +190,7 @@ func UpdateUser(c *gin.Context) {
 		}
 	}
 	if user.Phone != nil {
-		phoneExist := checkPhoneExists(*user.Phone, oldUser.Phone)
+		phoneExist := checkPhoneExists(*user.Phone, userInfo.Phone)
 		if phoneExist {
 			c.JSON(200, models.Result{Code: 10002, Message: "手机号已存在"})
 			return
@@ -201,33 +201,29 @@ func UpdateUser(c *gin.Context) {
 		}
 	}
 
-	var newUser models.User
-
 	if user.Email != nil {
-		newUser.Email = *user.Email
+		userInfo.Email = *user.Email
 	}
 	if user.Phone != nil {
-		newUser.Phone = *user.Phone
+		userInfo.Phone = *user.Phone
 	}
 	if user.Avatar != nil {
-		newUser.Avatar = *user.Avatar
+		userInfo.Avatar = *user.Avatar
 	}
 	if user.Age != nil {
-		newUser.Age = *user.Age
+		userInfo.Age = *user.Age
 	}
 	if user.Username != nil {
-		newUser.Username = *user.Username
+		userInfo.Username = *user.Username
 	}
 	if user.Gender != nil {
-		newUser.Gender = *user.Gender
+		userInfo.Gender = *user.Gender
 	}
 	if user.Birthday != nil {
-		newUser.Birthday = *user.Birthday
+		userInfo.Birthday = *user.Birthday
 	}
-	if user.Role != nil {
-		newUser.Role = *user.Role
-	}
-	db := models.DB.Model(&oldUser).Where("cid = ?", cid).Updates(&newUser)
+
+	db := models.DB.Model(&userInfo).Updates(&userInfo)
 	if db.Error != nil {
 		// SQL执行失败，返回错误信息
 		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
@@ -235,10 +231,10 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	updateCh := make(chan string)
-	go models.CommonUpdate[models.User](&newUser, c, updateCh)
+	go models.CommonUpdate[models.User](&userInfo, c, updateCh)
 	<-updateCh
 
-	c.JSON(200, models.Result{Code: 0, Message: "success", Data: models.GetSafeUser(newUser)})
+	c.JSON(200, models.Result{Code: 0, Message: "success", Data: models.GetSafeUser(userInfo)})
 }
 
 func DeleteUser(c *gin.Context) {

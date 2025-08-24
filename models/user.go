@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql/driver"
 	"errors"
+
 	"github.com/goccy/go-json"
 )
 

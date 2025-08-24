@@ -155,8 +155,20 @@ func getDictApi(router *gin.Engine) {
 	r.GET(":key", controllers.GetDict)
 }
 
+func getCommonApi(router *gin.Engine) {
+	r := router.Group("/common")
+
+	r.Use(checkTokenMiddleware)
+
+	r.POST("uploadPic", controllers.CommonUploadPic)
+}
+
 func setCros(router *gin.Engine) {
 	router.Use(CORSMiddleware())
+}
+
+func getLocalOss(router *gin.Engine) {
+	router.Static("/uploads", "./uploads")
 }
 
 func GetRouter() *gin.Engine {
@@ -167,5 +179,7 @@ func GetRouter() *gin.Engine {
 	getDictApi(router)
 	getPetApi(router)
 	getWashRecordApi(router)
+	getCommonApi(router)
+	getLocalOss(router)
 	return router
 }
