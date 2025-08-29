@@ -146,6 +146,25 @@ func getWashRecordApi(router *gin.Engine) {
 	r.POST("history", controllers.GetPetWashRecordSnapShoots)
 }
 
+func getEntrustmentApi(router *gin.Engine) {
+	r := router.Group("/entrustment")
+
+	r.Use(checkTokenMiddleware)
+	r.Use(checkIsEmployeeMiddleware)
+
+	r.GET(":PetId", controllers.GetPetEntrustment)
+
+	r.POST("", controllers.CreatePetEntrustment)
+
+	r.PUT("", controllers.UpdatePetEntrustment)
+
+	r.DELETE(":PetId", controllers.DeletePetEntrustment)
+
+	r.Use(checkAdminMiddleware)
+
+	r.POST("history", controllers.GetPetEntrustmentSnapShoots)
+}
+
 func getDictApi(router *gin.Engine) {
 	r := router.Group("/dict")
 
@@ -161,6 +180,7 @@ func getCommonApi(router *gin.Engine) {
 	r.Use(checkTokenMiddleware)
 
 	r.POST("uploadPic", controllers.CommonUploadPic)
+	r.POST("batchUploadPics", controllers.BatchUploadPics)
 }
 
 func setCros(router *gin.Engine) {
@@ -179,6 +199,7 @@ func GetRouter() *gin.Engine {
 	getDictApi(router)
 	getPetApi(router)
 	getWashRecordApi(router)
+	getEntrustmentApi(router)
 	getCommonApi(router)
 	getLocalOss(router)
 	return router

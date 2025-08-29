@@ -1,11 +1,12 @@
 package controllers
 
 import (
+	"time"
+
 	"github.com/dongjiayun/pet-shop-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"time"
 )
 
 type GetPetsReq struct {
@@ -106,6 +107,7 @@ func CreatePet(c *gin.Context) {
 	pet.PetId = "Pet-" + uuid.New().String()
 	pet.NickName = request.NickName
 	pet.Birthday = request.Birthday
+	pet.Weight = request.Weight
 	pet.Avatar = request.Avatar
 	pet.Breed = request.Breed
 	pet.Type = request.Type
@@ -114,6 +116,7 @@ func CreatePet(c *gin.Context) {
 	pet.DiagnosisHistory = request.DiagnosisHistory
 	pet.Forbiden = request.Forbiden
 	pet.Aggressive = request.Aggressive
+	pet.Remark = request.Remark
 
 	var customer models.Customer
 	var hasCustomer bool
@@ -203,6 +206,7 @@ func UpdatePet(c *gin.Context) {
 		DiagnosisHistory: request.DiagnosisHistory,
 		Forbiden:         request.Forbiden,
 		Aggressive:       request.Aggressive,
+		Remark:           request.Remark,
 	}
 
 	updateCh := make(chan string)

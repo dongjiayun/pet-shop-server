@@ -3,23 +3,25 @@ package models
 import (
 	"database/sql/driver"
 	"errors"
-	"github.com/goccy/go-json"
 	"time"
+
+	"github.com/goccy/go-json"
 )
 
 type PetEntrustment struct {
 	Model
-	PetEntrustmentId   string   `json:"petEntrustmentId"`
-	PetId              string   `json:"petId"`
-	Habit              string   `json:"habit"`           // 0 无 1 有
-	FoodRequirement    string   `json:"foodRequirement"` // 0 无 1 有
-	StrollRequirement  string   `json:"strollRequirement"`
-	NursingRequirement string   `json:"nursingRequirement"`
-	RoomRequirement    string   `json:"roomRequirement"`
-	Cautions           string   `json:"cautions"`
-	SpecialRequirement string   `json:"specialRequirement"`
-	Others             string   `json:"others"`
-	Attachments        []string `json:"attachments"`
+	PetEntrustmentId       string      `json:"petEntrustmentId"`
+	PetId                  string      `json:"petId"`
+	Habit                  string      `json:"habit"`           // 0 无 1 有
+	FoodRequirement        string      `json:"foodRequirement"` // 0 无 1 有
+	StrollRequirement      string      `json:"strollRequirement"`
+	NursingRequirement     string      `json:"nursingRequirement"`
+	RoomRequirement        string      `json:"roomRequirement"`
+	InteractionRequirement string      `json:"interactionRequirement"`
+	Cautions               string      `json:"cautions"`
+	SpecialRequirement     string      `json:"specialRequirement"`
+	Others                 string      `json:"others"`
+	Attachments            Attachments `json:"attachments"`
 }
 
 func (petEntrustment *PetEntrustment) Scan(value interface{}) error {

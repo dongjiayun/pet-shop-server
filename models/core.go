@@ -25,6 +25,8 @@ func init() {
 		&PetSnapShoot{},
 		&PetWashRecord{},
 		&PetWashRecordSnapShoot{},
+		&PetEntrustment{},
+		&PetEntrustmentSnapShoot{},
 		// &Article{},
 		// &Tag{},
 		// &Comment{},

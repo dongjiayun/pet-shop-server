@@ -3,19 +3,22 @@ package models
 import (
 	"database/sql/driver"
 	"errors"
-	"github.com/goccy/go-json"
 	"time"
+
+	"github.com/goccy/go-json"
 )
 
 type PetWashRecord struct {
 	Model
-	PetWashRecordId    string `json:"petWashRecordId"`
-	PetId              string `json:"petId"`
-	Aggressive         string `json:"aggressive"`        // 0 无 1 有
-	IsNeedRestriction  string `json:"isNeedRestriction"` // 0 无 1 有
-	ShapooProportion   string `json:"shapooProportion"`
-	SpecialRequirement string `json:"specialRequirement"`
-	BeautyRequirement  string `json:"beautyRequirement"`
+	PetWashRecordId    string      `json:"petWashRecordId"`
+	PetId              string      `json:"petId"`
+	Aggressive         string      `json:"aggressive"`        // 0 无 1 有
+	IsNeedRestriction  string      `json:"isNeedRestriction"` // 0 无 1 有
+	ShapooProportion   string      `json:"shapooProportion"`
+	SpecialRequirement string      `json:"specialRequirement"`
+	BeautyRequirement  string      `json:"beautyRequirement"`
+	Others             string      `json:"others"`
+	Attachments        Attachments `json:"attachments"`
 }
 
 func (petWashRecord *PetWashRecord) Scan(value interface{}) error {

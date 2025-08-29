@@ -17,7 +17,7 @@ func GetDict(c *gin.Context) {
 			c.JSON(500, models.Result{Code: 500, Message: "Failed to parse breed dictionary: " + err.Error(), Data: nil})
 			return
 		}
-		c.JSON(200, models.Result{Code: 200, Message: "success", Data: &data})
+		c.JSON(200, models.Result{Code: 0, Message: "success", Data: &data})
 	} else {
 		// 错误请求使用正确的 HTTP 状态码
 		c.JSON(400, models.Result{Code: 400, Message: "Invalid dictionary key", Data: nil})

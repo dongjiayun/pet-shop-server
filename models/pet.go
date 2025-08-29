@@ -3,8 +3,9 @@ package models
 import (
 	"database/sql/driver"
 	"errors"
-	"github.com/goccy/go-json"
 	"time"
+
+	"github.com/goccy/go-json"
 )
 
 type Breed struct {
@@ -39,15 +40,17 @@ type Pet struct {
 	PetId            string `json:"petId"`
 	NickName         string `json:"nickName"`
 	Birthday         string `json:"birthday"`
+	Weight           string `json:"weight"`
 	Avatar           string `json:"avatar"`
 	Breed            Breed  `json:"breed" gorm:"json""`
-	Type             string `json:"type"`
+	Type             string `json:"type"`         //0 猫 //1 狗 //2 其他
 	Gender           string `json:"gender"`       // 0 雄性 1 雌性
 	IsSterilized     string `json:"isSterilized"` // 0 未绝育 1 已绝育
 	DiagnosisHistory string `json:"diagnosisHistory"`
 	Forbiden         string `json:"forbiden"`
 	Aggressive       string `json:"aggressive"` // 0 无 1 有
 	CustomerId       string `json:"customerId"`
+	Remark           string `json:"remark"`
 }
 
 func (pet *Pet) Scan(value interface{}) error {

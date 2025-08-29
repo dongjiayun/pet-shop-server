@@ -1,33 +1,25 @@
 package controllers
 
 import (
+	"time"
+
 	"github.com/dongjiayun/pet-shop-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"time"
 )
 
 func GetPetEntrustment(c *gin.Context) {
 	cid := c.Param("PetId")
 	var petDetail models.PetEntrustment
-	db := models.DB.Table("pets").
+	db := models.DB.Table("pet_entrustments").
 		Select("*").
 		Where("pet_id = ?", cid).
 		Where("deleted_at IS NULL").
 		First(&petDetail)
 	if db.Error != nil {
 		if db.Error.Error() == "record not found" {
-			c.JSON(200, models.Result{Code: 10001, Message: "未找到该条记录"})
-			return
-		}
-		// SQL执行失败，返回错误信息
-		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
-		return
-	}
-	if db.Error != nil {
-		if db.Error.Error() == "record not found" {
-			c.JSON(200, models.Result{Code: 10001, Message: "未找到该条记录"})
+			c.JSON(200, models.Result{0, "success", nil})
 			return
 		}
 		// SQL执行失败，返回错误信息
@@ -59,6 +51,7 @@ func CreatePetEntrustment(c *gin.Context) {
 	petEntrustment.StrollRequirement = request.StrollRequirement
 	petEntrustment.NursingRequirement = request.NursingRequirement
 	petEntrustment.RoomRequirement = request.RoomRequirement
+	petEntrustment.InteractionRequirement = request.InteractionRequirement
 	petEntrustment.Cautions = request.Cautions
 	petEntrustment.SpecialRequirement = request.SpecialRequirement
 	petEntrustment.Others = request.Others
@@ -116,17 +109,18 @@ func UpdatePetEntrustment(c *gin.Context) {
 	}
 
 	update := models.PetEntrustment{
-		PetId:              request.PetId,
-		PetEntrustmentId:   request.PetEntrustmentId,
-		Habit:              request.Habit,
-		FoodRequirement:    request.FoodRequirement,
-		StrollRequirement:  request.StrollRequirement,
-		NursingRequirement: request.NursingRequirement,
-		RoomRequirement:    request.RoomRequirement,
-		Cautions:           request.Cautions,
-		SpecialRequirement: request.SpecialRequirement,
-		Others:             request.Others,
-		Attachments:        request.Attachments,
+		PetId:                  request.PetId,
+		PetEntrustmentId:       request.PetEntrustmentId,
+		Habit:                  request.Habit,
+		FoodRequirement:        request.FoodRequirement,
+		StrollRequirement:      request.StrollRequirement,
+		NursingRequirement:     request.NursingRequirement,
+		RoomRequirement:        request.RoomRequirement,
+		InteractionRequirement: request.InteractionRequirement,
+		Cautions:               request.Cautions,
+		SpecialRequirement:     request.SpecialRequirement,
+		Others:                 request.Others,
+		Attachments:            request.Attachments,
 	}
 
 	updateCh := make(chan string)

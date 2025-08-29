@@ -1,33 +1,26 @@
 package controllers
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/dongjiayun/pet-shop-server/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"time"
 )
 
 func GetPetWashRecord(c *gin.Context) {
 	cid := c.Param("PetId")
 	var petDetail models.PetWashRecord
-	db := models.DB.Table("pets").
+	db := models.DB.Table("pet_wash_records").
 		Select("*").
 		Where("pet_id = ?", cid).
 		Where("deleted_at IS NULL").
 		First(&petDetail)
 	if db.Error != nil {
 		if db.Error.Error() == "record not found" {
-			c.JSON(200, models.Result{Code: 10001, Message: "未找到该条记录"})
-			return
-		}
-		// SQL执行失败，返回错误信息
-		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
-		return
-	}
-	if db.Error != nil {
-		if db.Error.Error() == "record not found" {
-			c.JSON(200, models.Result{Code: 10001, Message: "未找到该条记录"})
+			c.JSON(200, models.Result{0, "success", nil})
 			return
 		}
 		// SQL执行失败，返回错误信息
@@ -58,6 +51,8 @@ func CreatePetWashRecord(c *gin.Context) {
 	petWashRecord.ShapooProportion = request.ShapooProportion
 	petWashRecord.SpecialRequirement = request.SpecialRequirement
 	petWashRecord.BeautyRequirement = request.BeautyRequirement
+	petWashRecord.Others = request.Others
+	petWashRecord.Attachments = request.Attachments
 
 	models.CommonCreate[models.PetWashRecord](&petWashRecord, c)
 
@@ -118,29 +113,28 @@ func UpdatePetWashRecord(c *gin.Context) {
 		ShapooProportion:   request.ShapooProportion,
 		SpecialRequirement: request.SpecialRequirement,
 		BeautyRequirement:  request.BeautyRequirement,
+		Others:             request.Others,
+		Attachments:        request.Attachments,
 	}
 
 	updateCh := make(chan string)
 	go models.CommonUpdate[models.PetWashRecord](&update, c, updateCh)
 	<-updateCh
 
+	fmt.Println(update)
+
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("pet_id = ?", petId).Updates(&update).Error; err != nil {
 			return err
 		}
 
-		petWashRecord := models.PetWashRecord{}
-		if err := tx.Where("pet_id = ?", petId).First(&petWashRecord).Error; err != nil {
-			return err
-		}
-
 		cid, _ := c.Get("cid")
 		snapshoot := models.PetWashRecordSnapShoot{
-			PetWashRecord: petWashRecord,
+			PetWashRecord: update,
 			SnapId:        "Snap-" + uuid.New().String(),
 			Type:          "1",
 			Editor:        cid.(string),
-			PetId:         petWashRecord.PetId,
+			PetId:         update.PetId,
 			EditTime:      time.Now(),
 		}
 
