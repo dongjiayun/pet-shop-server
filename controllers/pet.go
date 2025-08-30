@@ -13,6 +13,7 @@ type GetPetsReq struct {
 	PageSize int    `json:"PageSize"`
 	PageNo   int    `json:"PageNo"`
 	KeyWord  string `json:"keyword"`
+	Cid      string `json:"cid"`
 }
 
 func GetPets(c *gin.Context) {
@@ -33,15 +34,19 @@ func GetPets(c *gin.Context) {
 	if req.KeyWord != "" {
 		db = models.DB.Limit(pageSize).Offset((pageNo-1)*pageSize).Order("id desc").
 			Where("deleted_at IS NULL").
-			Where("nickname like ?", "%"+req.KeyWord+"%").
-			Or("customerId like ?", "%"+req.KeyWord+"%").
-			Find(&pets)
+			Where("nick_name like ?", "%"+req.KeyWord+"%").
+			Or("customer_id like ?", "%"+req.KeyWord+"%")
 	} else {
 		db = models.DB.Limit(pageSize).Offset((pageNo - 1) * pageSize).Order("id desc").
-			Where("deleted_at IS NULL").
-			Find(&pets)
+			Where("deleted_at IS NULL")
 	}
 
+	if req.Cid != "" {
+		db.Where("create_by = ?", req.Cid).
+			Or("update_by = ?", req.Cid)
+	}
+
+	db.Find(&pets)
 	if len(pets) == 0 {
 		list := models.GetListData[models.Pet](models.Pets{}, pageNo, pageSize, 0)
 		c.JSON(200, models.Result{0, "success", list})

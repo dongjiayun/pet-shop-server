@@ -11,20 +11,45 @@ import (
 	"gorm.io/gorm"
 )
 
+type GetUsersReq struct {
+	PageSize int    `json:"PageSize"`
+	PageNo   int    `json:"PageNo"`
+	KeyWord  string `json:"keyword"`
+}
+
 func GetUsers(c *gin.Context) {
-	pagination := models.Pagination{
+	req := GetPetsReq{
 		PageSize: 20,
 		PageNo:   1,
 	}
-	err := c.ShouldBindJSON(&pagination)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(200, models.Result{Code: 10001, Message: err.Error()})
 		return
 	}
-	pageNo := pagination.PageNo
-	pageSize := pagination.PageSize
+	pageNo := req.PageNo
+	pageSize := req.PageSize
 	var users models.Users
-	db := models.DB.Limit(pageSize).Offset((pageNo - 1) * pageSize).Order("id desc").Where("deleted_at IS NULL").Find(&users)
+	db := models.DB.Limit(pageSize).Offset((pageNo - 1) * pageSize).
+		Order(`
+			CASE 
+				WHEN role = 3 THEN 1
+				WHEN role = 2 THEN 2
+				WHEN role = 1 THEN 3
+				WHEN role = 4 THEN 4
+				WHEN role = 0 THEN 5
+				ELSE 6
+			END
+		`).
+		Order("id desc").
+		Where("deleted_at IS NULL")
+
+	if req.KeyWord != "" {
+		db.Where("username like ?", "%"+req.KeyWord+"%").
+			Or("email like ?", "%"+req.KeyWord+"%")
+	}
+
+	db.Find(&users)
 	if db.Error != nil {
 		// SQL执行失败，返回错误信息
 		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
@@ -291,7 +316,7 @@ func checkPhoneExists(phone string, exceptedPhone string) bool {
 
 type Permission struct {
 	Cid  string `json:"cid"`
-	Role string `json:"role"`
+	Role int    `json:"role"`
 }
 
 func SetPermission(c *gin.Context) {
