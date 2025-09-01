@@ -60,7 +60,19 @@ func CreatePetWashRecord(c *gin.Context) {
 		if err := tx.Create(&petWashRecord).Error; err != nil {
 			return err
 		}
+		user := models.User{}
+
 		cid, _ := c.Get("cid")
+
+		var pet models.Pet
+
+		models.DB.Where("petId = ?", request.PetId).First(&pet)
+
+		pet.Aggressive = request.Aggressive
+
+		models.DB.Where("petId = ?", request.PetId).Updates(&pet)
+
+		models.DB.Where("cid = ?", cid).First(&user)
 		snapshoot := models.PetWashRecordSnapShoot{
 			PetWashRecord: petWashRecord,
 			SnapId:        "Snap-" + uuid.New().String(),
@@ -68,6 +80,8 @@ func CreatePetWashRecord(c *gin.Context) {
 			Editor:        cid.(string),
 			PetId:         petWashRecord.PetId,
 			EditTime:      time.Now(),
+			EditorName:    user.Username,
+			EditorEmail:   user.Email,
 		}
 
 		if err := tx.Create(&snapshoot).Error; err != nil {
@@ -128,7 +142,18 @@ func UpdatePetWashRecord(c *gin.Context) {
 			return err
 		}
 
+		user := models.User{}
 		cid, _ := c.Get("cid")
+		models.DB.Where("cid = ?", cid).First(&user)
+
+		var pet models.Pet
+
+		models.DB.Where("petId = ?", petId).First(&pet)
+
+		pet.Aggressive = request.Aggressive
+
+		models.DB.Where("petId = ?", petId).Updates(&pet)
+
 		snapshoot := models.PetWashRecordSnapShoot{
 			PetWashRecord: update,
 			SnapId:        "Snap-" + uuid.New().String(),
@@ -136,6 +161,8 @@ func UpdatePetWashRecord(c *gin.Context) {
 			Editor:        cid.(string),
 			PetId:         update.PetId,
 			EditTime:      time.Now(),
+			EditorName:    user.Username,
+			EditorEmail:   user.Email,
 		}
 
 		if err := tx.Create(&snapshoot).Error; err != nil {

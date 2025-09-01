@@ -63,7 +63,11 @@ func CreatePetEntrustment(c *gin.Context) {
 		if err := tx.Create(&petEntrustment).Error; err != nil {
 			return err
 		}
+		user := models.User{}
+
 		cid, _ := c.Get("cid")
+
+		models.DB.Where("cid = ?", cid).First(&user)
 		snapshoot := models.PetEntrustmentSnapShoot{
 			PetEntrustment: petEntrustment,
 			SnapId:         "Snap-" + uuid.New().String(),
@@ -71,6 +75,8 @@ func CreatePetEntrustment(c *gin.Context) {
 			Editor:         cid.(string),
 			PetId:          petEntrustment.PetId,
 			EditTime:       time.Now(),
+			EditorName:     user.Username,
+			EditorEmail:    user.Email,
 		}
 
 		if err := tx.Create(&snapshoot).Error; err != nil {
@@ -137,7 +143,11 @@ func UpdatePetEntrustment(c *gin.Context) {
 			return err
 		}
 
+		user := models.User{}
+
 		cid, _ := c.Get("cid")
+
+		models.DB.Where("cid = ?", cid).First(&user)
 		snapshoot := models.PetEntrustmentSnapShoot{
 			PetEntrustment: petEntrustment,
 			SnapId:         "Snap-" + uuid.New().String(),
@@ -145,6 +155,8 @@ func UpdatePetEntrustment(c *gin.Context) {
 			Editor:         cid.(string),
 			PetId:          petEntrustment.PetId,
 			EditTime:       time.Now(),
+			EditorName:     user.Username,
+			EditorEmail:    user.Email,
 		}
 
 		if err := tx.Create(&snapshoot).Error; err != nil {
@@ -209,7 +221,7 @@ func GetPetEntrustmentSnapShoots(c *gin.Context) {
 	}
 	pageNo := req.PageNo
 	pageSize := req.PageSize
-	var snaps models.PetWashRecordSnapShots
+	var snaps models.PetEntrustmentSnapShots
 
 	var db *gorm.DB
 	if req.PetId != "" {
@@ -221,7 +233,7 @@ func GetPetEntrustmentSnapShoots(c *gin.Context) {
 	}
 
 	if len(snaps) == 0 {
-		list := models.GetListData[models.PetWashRecordSnapShoot](models.PetWashRecordSnapShots{}, pageNo, pageSize, 0)
+		list := models.GetListData[models.PetEntrustmentSnapShoot](models.PetEntrustmentSnapShots{}, pageNo, pageSize, 0)
 		c.JSON(200, models.Result{0, "success", list})
 		return
 	}
@@ -233,6 +245,6 @@ func GetPetEntrustmentSnapShoots(c *gin.Context) {
 	}
 	var totalCount int64
 	models.DB.Model(&snaps).Count(&totalCount)
-	list := models.GetListData[models.PetWashRecordSnapShoot](snaps, pageNo, pageSize, totalCount)
+	list := models.GetListData[models.PetEntrustmentSnapShoot](snaps, pageNo, pageSize, totalCount)
 	c.JSON(200, models.Result{0, "success", list})
 }

@@ -102,13 +102,15 @@ func (pets Pets) Value() (driver.Value, error) {
 // 快照
 
 type PetSnapShoot struct {
-	Id       uint      `json:"-" gorm:"primary_key"`
-	Pet      Pet       `json:"pet"`
-	SnapId   string    `json:"snapId"`
-	Type     string    `json:"type"` // 0 创建 1 修改
-	Editor   string    `json:"editor"`
-	PetId    string    `json:"petId"`
-	EditTime time.Time `json:"editTime"`
+	Id          uint      `json:"-" gorm:"primary_key"`
+	Pet         Pet       `json:"pet"`
+	SnapId      string    `json:"snapId"`
+	Type        string    `json:"type"` // 0 创建 1 修改
+	Editor      string    `json:"editor"`
+	PetId       string    `json:"petId"`
+	EditTime    time.Time `json:"editTime"`
+	EditorName  string    `json:"editName"`
+	EditorEmail string    `json:"editEmail"`
 }
 
 func (pet *PetSnapShoot) Scan(value interface{}) error {

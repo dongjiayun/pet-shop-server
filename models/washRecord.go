@@ -51,6 +51,8 @@ type PetWashRecordSnapShoot struct {
 	Editor        string        `json:"editor"`
 	PetId         string        `json:"petId"`
 	EditTime      time.Time     `json:"editTime"`
+	EditorName    string        `json:"editName"`
+	EditorEmail   string        `json:"editEmail"`
 }
 
 func (petWashRecordSnapShoot *PetWashRecordSnapShoot) Scan(value interface{}) error {
