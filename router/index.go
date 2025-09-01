@@ -88,11 +88,12 @@ func getUserApi(router *gin.Engine) {
 	r := router.Group("/user")
 
 	r.Use(checkTokenMiddleware)
-	r.Use(checkIsEmployeeMiddleware)
 
 	r.GET(":cid", controllers.GetUser)
 
 	r.PUT("", controllers.UpdateUser)
+
+	r.Use(checkIsEmployeeMiddleware)
 
 	r.DELETE(":cid", controllers.DeleteUser)
 

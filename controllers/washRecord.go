@@ -66,11 +66,11 @@ func CreatePetWashRecord(c *gin.Context) {
 
 		var pet models.Pet
 
-		models.DB.Where("petId = ?", request.PetId).First(&pet)
+		models.DB.Where("pet_id = ?", request.PetId).First(&pet)
 
 		pet.Aggressive = request.Aggressive
 
-		models.DB.Where("petId = ?", request.PetId).Updates(&pet)
+		models.DB.Where("pet_id = ?", request.PetId).Updates(&pet)
 
 		models.DB.Where("cid = ?", cid).First(&user)
 		snapshoot := models.PetWashRecordSnapShoot{
@@ -148,11 +148,11 @@ func UpdatePetWashRecord(c *gin.Context) {
 
 		var pet models.Pet
 
-		models.DB.Where("petId = ?", petId).First(&pet)
+		models.DB.Where("pet_id = ?", petId).First(&pet)
 
 		pet.Aggressive = request.Aggressive
 
-		models.DB.Where("petId = ?", petId).Updates(&pet)
+		models.DB.Where("pet_id = ?", petId).Updates(&pet)
 
 		snapshoot := models.PetWashRecordSnapShoot{
 			PetWashRecord: update,

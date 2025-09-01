@@ -177,11 +177,11 @@ func CreatePet(c *gin.Context) {
 
 		var washRecord models.PetWashRecord
 
-		wrDB := models.DB.Where("petId = ?", pet.PetId).First(&washRecord)
+		wrDB := models.DB.Where("pet_id = ?", pet.PetId).First(&washRecord)
 
 		if wrDB.Error == nil {
 			washRecord.Aggressive = request.Aggressive
-			models.DB.Where("petId = ?", request.PetId).Updates(&washRecord)
+			models.DB.Where("pet_id = ?", request.PetId).Updates(&washRecord)
 		}
 
 		return nil
@@ -267,11 +267,11 @@ func UpdatePet(c *gin.Context) {
 
 		var washRecord models.PetWashRecord
 
-		wrDB := models.DB.Where("petId = ?", pet.PetId).First(&washRecord)
+		wrDB := models.DB.Where("pet_id = ?", pet.PetId).First(&washRecord)
 
 		if wrDB.Error == nil {
 			washRecord.Aggressive = request.Aggressive
-			models.DB.Where("petId = ?", request.PetId).Updates(&washRecord)
+			models.DB.Where("pet_id = ?", request.PetId).Updates(&washRecord)
 		}
 
 		return nil
