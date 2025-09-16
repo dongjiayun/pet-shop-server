@@ -195,10 +195,12 @@ func CommonCreate[T interface{}](t *T, c *gin.Context) {
 		auditAtField.Set(reflect.ValueOf(time.Now()))
 	}
 
-	cid, _ := c.Get("cid")
+	cid, exists := c.Get("cid")
 	createByField := value.FieldByName("CreateBy")
-	if createByField.IsValid() && createByField.CanSet() {
-		createByField.SetString(cid.(string))
+	if createByField.IsValid() && createByField.CanSet() && exists && cid != nil {
+		if cidStr, ok := cid.(string); ok {
+			createByField.SetString(cidStr)
+		}
 	}
 }
 
