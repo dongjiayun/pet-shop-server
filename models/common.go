@@ -22,15 +22,15 @@ type Pagination struct {
 }
 
 type Model struct {
-	Id        uint      `json:"-" gorm:"primary_key"`
-	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime" `
-	UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime" `
-	DeletedAt time.Time `json:"-" gorm:"default:null"`
-	IsAudit   bool      `json:"-"`
-	AuditBy   string    `json:"-" gorm:"type:varchar(255)"`
-	AuditAt   time.Time `json:"-" gorm:"default:null"`
-	UpdateBy  string    `json:"-" gorm:"type:varchar(255)"`
-	CreateBy  string    `json:"-" gorm:"type:varchar(255)"`
+	Id        uint       `json:"-" gorm:"primary_key"`
+	CreatedAt time.Time  `json:"createdAt" gorm:"autoCreateTime" `
+	UpdatedAt time.Time  `json:"updatedAt" gorm:"autoUpdateTime" `
+	DeletedAt *time.Time `json:"-" gorm:"default:null"`
+	IsAudit   bool       `json:"-"`
+	AuditBy   string     `json:"-" gorm:"type:varchar(255)"`
+	AuditAt   *time.Time `json:"-" gorm:"default:null"`
+	UpdateBy  string     `json:"-" gorm:"type:varchar(255)"`
+	CreateBy  string     `json:"-" gorm:"type:varchar(255)"`
 }
 
 type Result struct {
@@ -192,7 +192,8 @@ func CommonCreate[T interface{}](t *T, c *gin.Context) {
 
 	auditAtField := value.FieldByName("AuditAt")
 	if auditAtField.IsValid() && auditAtField.CanSet() {
-		auditAtField.Set(reflect.ValueOf(time.Now()))
+		now := time.Now()
+		auditAtField.Set(reflect.ValueOf(&now))
 	}
 
 	cid, exists := c.Get("cid")
@@ -228,7 +229,8 @@ func CommonUpdate[T interface{}](t *T, c *gin.Context, ch chan string) {
 
 	auditAtField := value.FieldByName("AuditAt")
 	if auditAtField.IsValid() && auditAtField.CanSet() {
-		auditAtField.Set(reflect.ValueOf(time.Now()))
+		now := time.Now()
+		auditAtField.Set(reflect.ValueOf(&now))
 	}
 
 	cid, _ := c.Get("cid")
