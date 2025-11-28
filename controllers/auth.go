@@ -555,7 +555,6 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 	cid := refreshToken.Cid
-	fmt.Println(cid)
 	loginType := refreshToken.LoginType
 	var user models.User
 	db := models.DB.Model(&models.User{}).Where("cid = ?", cid).First(&user)
@@ -564,7 +563,24 @@ func RefreshToken(c *gin.Context) {
 		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
 		return
 	}
-	generateToken(c, user.Email, loginType)
+
+	// 直接生成新的token和refresh token
+	token, _ := GenToken(user.Cid, loginType)
+	newRefreshToken, _ := GenRefreshToken(user.Cid, loginType)
+
+	type Result struct {
+		models.SafeUser
+		Token        string `json:"token"`
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	result := Result{
+		SafeUser:     models.GetSafeUser(user),
+		Token:        token,
+		RefreshToken: newRefreshToken,
+	}
+
+	c.JSON(200, models.Result{Code: 0, Message: "success", Data: result})
 }
 
 func CheckRefreshToken(c *gin.Context) (*TokenClaims, error) {
@@ -738,7 +754,11 @@ type ResetPasswordRequest struct {
 }
 
 func ResetPassword(c *gin.Context) {
-	cid, _ := c.Get("cid")
+	cid, ok := c.Get("cid")
+	if !ok {
+		c.JSON(200, models.Result{Code: 10001, Message: "用户未登录"})
+		return
+	}
 	var request ResetPasswordRequest
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
@@ -754,17 +774,28 @@ func ResetPassword(c *gin.Context) {
 	}
 
 	var user models.User
-	models.DB.Where("cid = ?", cid).First(&user)
+	db := models.DB.Where("cid = ?", cid).First(&user)
+	if db.Error != nil {
+		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+		return
+	}
 
 	if password != user.Password {
 		c.JSON(200, models.Result{Code: 10003, Message: "原密码不正确"})
 		return
 	}
 
-	models.DB.Model(&user).Where("cid = ?", cid).Update("password", newPassword)
+	// 更新密码
+	db = models.DB.Model(&user).Where("cid = ?", cid).Update("password", newPassword)
+	if db.Error != nil {
+		c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+		return
+	}
 
 	token := c.GetHeader("Authorization")
-	handleWasteToken(token)
+	if token != "" {
+		handleWasteToken(token)
+	}
 
 	c.JSON(200, models.Result{0, "success", nil})
 }
@@ -787,6 +818,15 @@ func FindbackPassword(c *gin.Context) {
 		c.JSON(200, models.Result{Code: 10001, Message: "邮箱不能为空"})
 		return
 	}
+	if request.Password == "" {
+		c.JSON(200, models.Result{Code: 10001, Message: "新密码不能为空"})
+		return
+	}
+	// 验证密码格式
+	if !utils.CheckPassword(request.Password) {
+		c.JSON(200, models.Result{Code: 10002, Message: "请输入6-20位密码,必须包含数字和字母"})
+		return
+	}
 	emailExist := checkEmailExists(request.Email, "")
 	if emailExist {
 		if request.Smscode == "" {
@@ -803,12 +843,24 @@ func FindbackPassword(c *gin.Context) {
 
 		if optCache.Val() != "" {
 			var cache models.AuthOtp
-			json.Unmarshal([]byte(optCache.Val()), &cache)
+			err := json.Unmarshal([]byte(optCache.Val()), &cache)
+			if err != nil {
+				c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+				return
+			}
 			if cache.Code == request.Smscode && cache.Ticket == request.Ticket {
 				var user models.User
-				models.DB.Where("email = ?", request.Email).First(&user)
+				db := models.DB.Where("email = ?", request.Email).First(&user)
+				if db.Error != nil {
+					c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+					return
+				}
 				user.Password = request.Password
-				models.DB.Save(&user)
+				db = models.DB.Save(&user)
+				if db.Error != nil {
+					c.JSON(200, models.Result{Code: 10002, Message: "internal server error"})
+					return
+				}
 				token := c.GetHeader("Authorization")
 				if token != "" {
 					handleWasteToken(token)

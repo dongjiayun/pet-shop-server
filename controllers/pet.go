@@ -42,8 +42,8 @@ func GetPets(c *gin.Context) {
 	}
 
 	if req.Cid != "" {
-		db.Where("create_by = ?", req.Cid).
-			Or("update_by = ?", req.Cid)
+		// 查询所有该用户作为创建者、当前修改者或历史修改者的宠物
+		db = db.Where("create_by = ? OR update_by = ? OR pet_id IN (SELECT DISTINCT pet_id FROM pet_snap_shoots WHERE editor = ?)", req.Cid, req.Cid, req.Cid)
 	}
 
 	db.Find(&pets)
@@ -59,7 +59,7 @@ func GetPets(c *gin.Context) {
 		return
 	}
 	var totalCount int64
-	models.DB.Model(&pets).Count(&totalCount)
+	db.Model(&pets).Count(&totalCount)
 	list := models.GetListData[models.Pet](pets, pageNo, pageSize, totalCount)
 	c.JSON(200, models.Result{0, "success", list})
 }

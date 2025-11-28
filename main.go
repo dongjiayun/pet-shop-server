@@ -9,6 +9,7 @@ import (
 func init() {
 	models.InitRedis()
 	utils.InitValidator()
+	utils.InitLogger()
 }
 
 func main() {
